@@ -1,13 +1,11 @@
 """A wrapper for TensorFlow Lite image classification models."""
 
 import dataclasses
-import json
 import platform
 from typing import List
 
 import cv2
 import numpy as np
-from tflite_support import metadata
 
 from tflite_runtime.interpreter import Interpreter
 
@@ -66,26 +64,21 @@ class ImageClassifier(object):
         OSError: If the current OS isn't supported by EdgeTPU.
     """
     # Load metadata from model.
-    displayer = metadata.MetadataDisplayer.with_model_file(model_path)
-
-    # Save model metadata for preprocessing later.
-    model_metadata = json.loads(displayer.get_metadata_json())
-    process_units = model_metadata['subgraph_metadata'][0][
-        'input_tensor_metadata'][0]['process_units']
     mean = 127.5
     std = 127.5
-    for option in process_units:
-      if option['options_type'] == 'NormalizationOptions':
-        mean = option['options']['mean'][0]
-        std = option['options']['std'][0]
     self._mean = mean
     self._std = std
 
     # Load label list from metadata.
-    file_name = displayer.get_packed_associated_file_list()[0]
-    label_map_file = displayer.get_associated_file_buffer(file_name).decode()
-    label_list = list(filter(len, label_map_file.splitlines()))
-    self._label_list = label_list
+    PATH_TO_LABELS = "labels.txt"
+    labels = []
+    with open(PATH_TO_LABELS, "r") as label:
+        text = label.read()
+        lines = text.split("\n")
+        for line in lines[0:-1]:
+            hold = line.split(" ", 1)        
+            labels.append(hold[1])   
+    self._label_list = labels
 
     # Initialize TFLite model.
     interpreter = Interpreter(
